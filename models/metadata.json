@@ -1,0 +1,25 @@
+{
+  "version": "v1",
+  "model_type": "lgbm",
+  "created_at": "2026-01-05T14:23:24.068137",
+  "metrics": {
+    "val_rmsle": 0.5231930142731455,
+    "cv_rmsle_mean": 0.5221188845858415,
+    "cv_rmsle_std": 0.0029122088505393775,
+    "n_train": 39968,
+    "n_val": 9992,
+    "n_features": 10028
+  },
+  "params": {
+    "n_estimators": 1000,
+    "learning_rate": 0.05,
+    "max_depth": 8,
+    "num_leaves": 31,
+    "min_child_samples": 20,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": -1
+  }
+}
