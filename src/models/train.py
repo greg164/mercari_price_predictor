@@ -324,6 +324,41 @@ def load_model(filepath: Optional[Path] = None, version: str = "v1"):
     
     return model
 
+# ================================================================================
+# SELECTION DES TOP N FEATURES
+# ================================================================================
+
+def select_top_features(
+    model,
+    X: csr_matrix,
+    feature_names: list[str],
+    top_n: int = 1000
+) -> Tuple[csr_matrix, list[str], np.ndarray]:
+    """
+    Sélectionne les top N features selon l'importance du modèle.
+    
+    Args:
+        model: Modèle LightGBM entraîné
+        X: Matrice de features
+        feature_names: Noms des features
+        top_n: Nombre de features à garder
+    
+    Returns:
+        Tuple (X réduit, noms des features gardées, indices des features)
+    """
+    importances = model.feature_importances_
+    
+    # Indices des top N features
+    top_indices = np.argsort(importances)[::-1][:top_n]
+    top_indices = np.sort(top_indices)  # Remettre dans l'ordre original
+    
+    # Filtrer
+    X_reduced = X[:, top_indices]
+    selected_names = [feature_names[i] for i in top_indices]
+    
+    logger.info(f"Features réduites: {X.shape[1]} → {X_reduced.shape[1]}")
+    
+    return X_reduced, selected_names, top_indices
 
 # ================================================================================
 # PIPELINE COMPLET
@@ -335,7 +370,9 @@ def train_full_pipeline(
     tfidf_max_features: int = 10000,
     cv: int = 5,
     version: str = "v1",
-    save: bool = True
+    save: bool = True, 
+    feature_selection: bool = False, 
+    top_n_features: int = 1000
 ) -> Tuple[Any, MercariPreprocessor, Dict]:
     """
     Pipeline complet d'entraînement.
@@ -442,11 +479,28 @@ def train_full_pipeline(
             params = DEFAULT_PARAMS['ridge']
             model = train_ridge(X_train_features, y_train_log, params)
         else:
-            model = train_lightgbm(
-                X_train_features, y_train_log,
-                X_val_features, y_val_log,
-                params
-            )
+            # model = train_lightgbm(
+            #     X_train_features, y_train_log,
+            #     X_val_features, y_val_log,
+            #     params
+            # )
+            # Entraîner un premier modèle
+            model = train_lightgbm(X_train_features, y_train_log, X_val_features, y_val_log, params)
+            
+            # Réduction de features (optionnel)
+            if feature_selection and hasattr(model, 'feature_importances_'):
+                logger.info(f"Sélection des {top_n_features} meilleures features...")
+                
+                X_train_reduced, selected_names, top_indices = select_top_features(
+                    model, X_train_features, preprocessor.get_feature_names(), top_n_features
+                )
+                X_val_reduced = X_val_features[:, top_indices]
+                
+                # Ré-entraîner sur le subset
+                model = train_lightgbm(X_train_reduced, y_train_log, X_val_reduced, y_val_log, params)
+                
+                # Sauvegarder les indices pour l'inférence
+                preprocessor.selected_indices_ = top_indices
     else:
         raise ValueError(f"Modèle inconnu: {model_type}")
     
