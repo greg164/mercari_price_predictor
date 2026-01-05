@@ -136,7 +136,8 @@ def prepare_input_data(
 def predict_price(
     model,
     preprocessor,
-    input_data: pd.DataFrame
+    input_data: pd.DataFrame,
+    inflation_coefficient: float = 1.30
 ) -> Dict:
     """
     Prédit le prix à partir des données d'entrée.
@@ -148,8 +149,8 @@ def predict_price(
         # Prédiction (en log)
         y_log_pred = model.predict(X)[0]
         
-        # Revenir au prix réel
-        predicted_price = np.expm1(y_log_pred)
+        # Revenir au prix réel + coefficient d'inflation
+        predicted_price = np.expm1(y_log_pred) * inflation_coefficient
         
         # Calculer une fourchette (approximation basée sur le RMSLE ~0.49)
         # RMSLE de 0.49 signifie ~50% d'erreur en échelle log
@@ -360,6 +361,18 @@ def load_css():
         font-size: 0.85rem;
     }
     
+    /* Disclaimer */
+    .disclaimer {
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+        color: #ffc107;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+    
     /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -391,6 +404,16 @@ def render_header():
     <div class="main-header">
         <h1>🏷️ Mercari Price Predictor</h1>
         <p>Estimez le prix optimal de vente pour votre article</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_disclaimer():
+    """Affiche le disclaimer sur les données."""
+    st.markdown("""
+    <div class="disclaimer">
+        ⚠️ <strong>Prix basés sur des données 2017-2018.</strong> 
+        Pour les produits récents, un coefficient d'inflation de 30% est appliqué sur les prédictions.
     </div>
     """, unsafe_allow_html=True)
 
@@ -535,6 +558,9 @@ def main():
     
     # Header
     render_header()
+    
+    # Disclaimer
+    render_disclaimer()
     
     # Charger le modèle
     model, preprocessor, error = load_model_and_preprocessor()
