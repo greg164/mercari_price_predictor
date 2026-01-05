@@ -1,0 +1,263 @@
+================================================================================
+        GUIDE D'INSTALLATION — MERCARI PRICE PREDICTOR
+================================================================================
+
+Ce guide explique comment récupérer et configurer le projet sur un nouvel
+ordinateur ou un nouveau réseau.
+
+================================================================================
+PRÉREQUIS
+================================================================================
+
+Avant de commencer, assure-toi d'avoir installé :
+
+1. Python 3.10 ou supérieur
+   → Télécharger : https://www.python.org/downloads/
+   → Cocher "Add Python to PATH" lors de l'installation
+
+2. Git
+   → Télécharger : https://git-scm.com/downloads
+
+3. Un éditeur de code (recommandé : VS Code)
+   → Télécharger : https://code.visualstudio.com/
+
+4. Un compte GitHub avec accès au repository
+   → https://github.com
+
+5. Un compte Kaggle
+   → https://www.kaggle.com
+
+
+================================================================================
+ÉTAPE 1 : CLONER LE REPOSITORY
+================================================================================
+
+Ouvre un terminal (PowerShell sur Windows, Terminal sur Mac/Linux).
+
+# Se placer dans le dossier où tu veux le projet
+cd C:\Users\TON_USERNAME\Documents
+
+# Cloner le repo (remplace l'URL par la bonne)
+git clone https://github.com/greg164/mercari_price_predictor.git
+
+# Entrer dans le dossier du projet
+cd mercari_price_predictor
+
+
+================================================================================
+ÉTAPE 2 : CRÉER L'ENVIRONNEMENT VIRTUEL
+================================================================================
+
+# Créer l'environnement virtuel
+python -m venv venv
+
+# Activer l'environnement virtuel
+# Sur Windows (PowerShell) :
+.\venv\Scripts\Activate
+
+# Sur Windows (CMD) :
+venv\Scripts\activate.bat
+
+# Sur Mac/Linux :
+source venv/bin/activate
+
+# Tu devrais voir (venv) au début de ta ligne de commande
+
+
+================================================================================
+ÉTAPE 3 : INSTALLER LES DÉPENDANCES
+================================================================================
+
+# Mettre à jour pip
+python -m pip install --upgrade pip
+
+# Installer les dépendances du projet
+pip install -r requirements.txt
+
+
+================================================================================
+ÉTAPE 4 : CONFIGURER KAGGLE
+================================================================================
+
+Les données du projet viennent de Kaggle. Il faut configurer l'API.
+
+1. Va sur https://www.kaggle.com/settings
+
+2. Dans la section "API", clique sur "Create New Token"
+   → Un fichier kaggle.json va se télécharger
+
+3. Crée le dossier .kaggle et déplace le fichier :
+
+   # Sur Windows (PowerShell) :
+   New-Item -Path "$env:USERPROFILE\.kaggle" -ItemType Directory -Force
+   Move-Item -Path "$env:USERPROFILE\Downloads\kaggle.json" -Destination "$env:USERPROFILE\.kaggle\kaggle.json"
+
+   # Sur Mac/Linux :
+   mkdir -p ~/.kaggle
+   mv ~/Downloads/kaggle.json ~/.kaggle/
+   chmod 600 ~/.kaggle/kaggle.json
+
+4. Vérifie que le fichier est bien configuré :
+   
+   # Sur Windows :
+   Get-Content "$env:USERPROFILE\.kaggle\kaggle.json"
+   
+   # Sur Mac/Linux :
+   cat ~/.kaggle/kaggle.json
+
+   → Doit afficher : {"username":"ton_username","key":"ta_cle"}
+
+
+================================================================================
+ÉTAPE 5 : TÉLÉCHARGER LES DONNÉES
+================================================================================
+
+OPTION A — Téléchargement manuel (recommandé)
+---------------------------------------------
+
+1. Va sur https://www.kaggle.com/c/mercari-price-suggestion-challenge/data
+
+2. Accepte les règles de la compétition si demandé
+
+3. Clique sur "Download All"
+
+4. Extrais le ZIP dans le dossier data/raw/ du projet :
+
+   # Sur Windows (PowerShell) :
+   Expand-Archive -Path "$env:USERPROFILE\Downloads\mercari-price-suggestion-challenge.zip" -DestinationPath ".\data\raw" -Force
+
+   # Sur Mac/Linux :
+   unzip ~/Downloads/mercari-price-suggestion-challenge.zip -d ./data/raw/
+
+5. Vérifie que les fichiers sont présents :
+   python scripts/download_data.py --verify-only
+
+
+OPTION B — Téléchargement via script (peut ne pas fonctionner)
+--------------------------------------------------------------
+
+python scripts/download_data.py
+
+Note : L'API Kaggle peut retourner une erreur 401 pour les anciennes
+compétitions. Dans ce cas, utilise l'option A.
+
+
+================================================================================
+ÉTAPE 6 : VÉRIFIER L'INSTALLATION
+================================================================================
+
+# Vérifier que Python fonctionne
+python --version
+
+# Vérifier que les packages sont installés
+python -c "import pandas; import numpy; import sklearn; print('OK')"
+
+# Vérifier que les données sont présentes
+python scripts/download_data.py --verify-only
+
+# Lancer les tests (si disponibles)
+pytest tests/ -v
+
+
+================================================================================
+STRUCTURE DES DOSSIERS APRÈS INSTALLATION
+================================================================================
+
+mercari_price_predictor/
+│
+├── data/
+│   └── raw/
+│       ├── train.tsv          ← Fichier principal (~700 MB)
+│       ├── test.tsv           ← Fichier de test (optionnel)
+│       └── ...
+│
+├── venv/                      ← Environnement virtuel (créé localement)
+│
+├── src/                       ← Code source
+├── api/                       ← API FastAPI
+├── app/                       ← Interface Streamlit
+├── notebooks/                 ← Jupyter notebooks
+├── models/                    ← Modèles entraînés
+├── scripts/                   ← Scripts utilitaires
+├── tests/                     ← Tests unitaires
+├── configs/                   ← Fichiers de configuration
+│
+├── requirements.txt           ← Dépendances Python
+├── README.md                  ← Documentation
+└── .gitignore                 ← Fichiers ignorés par Git
+
+
+================================================================================
+COMMANDES UTILES
+================================================================================
+
+# Activer l'environnement virtuel
+.\venv\Scripts\Activate                    # Windows
+source venv/bin/activate                   # Mac/Linux
+
+# Désactiver l'environnement virtuel
+deactivate
+
+# Mettre à jour les dépendances
+pip install -r requirements.txt --upgrade
+
+# Lancer l'API
+uvicorn api.main:app --reload --port 8000
+
+# Lancer l'interface Streamlit
+streamlit run app/streamlit_app.py
+
+# Lancer Jupyter Notebook
+jupyter notebook
+
+# Voir le statut Git
+git status
+
+# Récupérer les dernières modifications
+git pull origin main
+
+
+================================================================================
+RÉSOLUTION DE PROBLÈMES COURANTS
+================================================================================
+
+PROBLÈME : "python" n'est pas reconnu
+→ Python n'est pas dans le PATH
+→ Réinstalle Python en cochant "Add Python to PATH"
+→ Ou utilise "python3" au lieu de "python"
+
+PROBLÈME : Erreur "pip" non reconnu
+→ Utilise : python -m pip install ...
+
+PROBLÈME : Erreur d'activation du venv sur Windows
+→ Exécute d'abord : Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+PROBLÈME : Erreur 401 Kaggle
+→ L'API ne fonctionne pas pour cette compétition
+→ Télécharge manuellement depuis le site Kaggle
+
+PROBLÈME : Fichier kaggle.json non trouvé
+→ Vérifie le chemin : C:\Users\TON_USERNAME\.kaggle\kaggle.json
+→ Le dossier commence par un point (.)
+
+PROBLÈME : Erreur d'encodage kaggle.json
+→ Recrée le fichier avec le bon encodage (voir étape 4)
+
+PROBLÈME : Package non trouvé lors de l'import
+→ Vérifie que l'environnement virtuel est activé (venv)
+→ Réinstalle : pip install -r requirements.txt
+
+
+================================================================================
+CONTACTS / SUPPORT
+================================================================================
+
+En cas de problème :
+1. Vérifie ce guide
+2. Consulte le README.md du projet
+3. Ouvre une issue sur GitHub
+
+
+================================================================================
+FIN DU GUIDE
+================================================================================
