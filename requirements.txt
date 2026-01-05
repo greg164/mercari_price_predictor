@@ -16,3 +16,6 @@ streamlit>=1.28.0
 
 # Sérialisation
 joblib>=1.3.0
+
+# Traduction
+deep-translator
