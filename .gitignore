@@ -19,7 +19,7 @@ data/processed/
 # ================================================================================
 
 # Modèles sérialisés (trop volumineux)
-models/*.joblib
+# models/*.joblib
 models/*.pkl
 models/*.pickle
 models/*.h5
