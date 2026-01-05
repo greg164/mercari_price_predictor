@@ -226,6 +226,63 @@ def train_lightgbm(
     
     return model
 
+# Après la fonction train_lightgbm(), ajouter :
+
+def train_ensemble(
+    X_train: csr_matrix,
+    y_train: np.ndarray,
+    X_val: csr_matrix = None,
+    y_val: np.ndarray = None,
+    ridge_params: Dict = None,
+    lgbm_params: Dict = None,
+    weights: Tuple[float, float] = (0.3, 0.7)
+) -> Dict:
+    """
+    Entraîne un ensemble Ridge + LightGBM.
+    
+    Args:
+        X_train, y_train: Données d'entraînement
+        X_val, y_val: Données de validation
+        ridge_params: Hyperparamètres Ridge
+        lgbm_params: Hyperparamètres LightGBM
+        weights: Pondération (ridge_weight, lgbm_weight)
+    
+    Returns:
+        Dict avec les deux modèles et les poids
+    """
+    ridge_params = ridge_params or DEFAULT_PARAMS['ridge']
+    lgbm_params = lgbm_params or DEFAULT_PARAMS['lgbm']
+    
+    logger.info("Entraînement de l'ensemble Ridge + LightGBM")
+    
+    # Entraîner Ridge
+    model_ridge = train_ridge(X_train, y_train, ridge_params)
+    
+    # Entraîner LightGBM
+    model_lgbm = train_lightgbm(X_train, y_train, X_val, y_val, lgbm_params)
+    
+    # Évaluer chaque modèle sur validation
+    if X_val is not None and y_val is not None:
+        pred_ridge = model_ridge.predict(X_val)
+        pred_lgbm = model_lgbm.predict(X_val)
+        
+        rmsle_ridge = rmsle(y_val, pred_ridge)
+        rmsle_lgbm = rmsle(y_val, pred_lgbm)
+        
+        # Prédiction ensemble
+        pred_ensemble = weights[0] * pred_ridge + weights[1] * pred_lgbm
+        rmsle_ensemble = rmsle(y_val, pred_ensemble)
+        
+        logger.info(f"  Ridge RMSLE: {rmsle_ridge:.4f}")
+        logger.info(f"  LightGBM RMSLE: {rmsle_lgbm:.4f}")
+        logger.info(f"  Ensemble RMSLE: {rmsle_ensemble:.4f}")
+    
+    return {
+        'ridge': model_ridge,
+        'lgbm': model_lgbm,
+        'weights': weights,
+        'type': 'ensemble'
+    }
 
 # ================================================================================
 # SAUVEGARDE
@@ -468,10 +525,10 @@ def train_full_pipeline(
     print("4. ENTRAÎNEMENT")
     print(f"{'='*60}")
     
-    params = DEFAULT_PARAMS.get(model_type, {})
-    
     if model_type == 'ridge':
+        params = DEFAULT_PARAMS['ridge']
         model = train_ridge(X_train_features, y_train_log, params)
+        
     elif model_type == 'lgbm':
         if not HAS_LIGHTGBM:
             print("  ⚠ LightGBM non disponible, fallback sur Ridge")
@@ -479,42 +536,45 @@ def train_full_pipeline(
             params = DEFAULT_PARAMS['ridge']
             model = train_ridge(X_train_features, y_train_log, params)
         else:
-            # model = train_lightgbm(
-            #     X_train_features, y_train_log,
-            #     X_val_features, y_val_log,
-            #     params
-            # )
-            # Entraîner un premier modèle
-            model = train_lightgbm(X_train_features, y_train_log, X_val_features, y_val_log, params)
+            params = DEFAULT_PARAMS['lgbm']
+            model = train_lightgbm(
+                X_train_features, y_train_log,
+                X_val_features, y_val_log,
+                params
+            )
             
-            # Réduction de features (optionnel)
-            if feature_selection and hasattr(model, 'feature_importances_'):
-                logger.info(f"Sélection des {top_n_features} meilleures features...")
-                
-                X_train_reduced, selected_names, top_indices = select_top_features(
-                    model, X_train_features, preprocessor.get_feature_names(), top_n_features
-                )
-                X_val_reduced = X_val_features[:, top_indices]
-                
-                # Ré-entraîner sur le subset
-                model = train_lightgbm(X_train_reduced, y_train_log, X_val_reduced, y_val_log, params)
-                
-                # Sauvegarder les indices pour l'inférence
-                preprocessor.selected_indices_ = top_indices
+    elif model_type == 'ensemble':
+        if not HAS_LIGHTGBM:
+            print("  ⚠ LightGBM non disponible, fallback sur Ridge")
+            model_type = 'ridge'
+            params = DEFAULT_PARAMS['ridge']
+            model = train_ridge(X_train_features, y_train_log, params)
+        else:
+            params = {'ridge': DEFAULT_PARAMS['ridge'], 'lgbm': DEFAULT_PARAMS['lgbm']}
+            model = train_ensemble(
+                X_train_features, y_train_log,
+                X_val_features, y_val_log,
+                weights=(0.3, 0.7)
+            )
     else:
         raise ValueError(f"Modèle inconnu: {model_type}")
     
     # -------------------------------------------------------------------------
-    # 5. Évaluation
+    # 5. ÉVALUATION
     # -------------------------------------------------------------------------
     print(f"\n{'='*60}")
     print("5. ÉVALUATION")
     print(f"{'='*60}")
     
-    # Score sur validation
-    y_val_pred = model.predict(X_val_features)
-    val_rmsle = rmsle(y_val_log, y_val_pred)
+    # Prédiction selon le type de modèle
+    if model_type == 'ensemble':
+        y_pred_ridge = model['ridge'].predict(X_val_features)
+        y_pred_lgbm = model['lgbm'].predict(X_val_features)
+        y_val_pred = model['weights'][0] * y_pred_ridge + model['weights'][1] * y_pred_lgbm
+    else:
+        y_val_pred = model.predict(X_val_features)
     
+    val_rmsle = rmsle(y_val_log, y_val_pred)
     print(f"  RMSLE validation: {val_rmsle:.4f}")
     
     # Cross-validation (sur train seulement)
@@ -595,7 +655,7 @@ Exemples:
     
     parser.add_argument(
         '--model', '-m',
-        choices=['ridge', 'lgbm'],
+        choices=['ridge', 'lgbm', 'ensemble'],
         default='lgbm',
         help='Type de modèle (défaut: lgbm)'
     )

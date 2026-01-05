@@ -1,7 +1,7 @@
 {
   "version": "v1",
   "model_type": "lgbm",
-  "created_at": "2026-01-05T16:54:05.100556",
+  "created_at": "2026-01-05T17:29:13.441273",
   "metrics": {
     "val_rmsle": 0.4759443384112977,
     "cv_rmsle_mean": null,

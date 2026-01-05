@@ -90,7 +90,15 @@ def prepare_input_data(name, category_main, category_sub1, brand_name, item_cond
 def predict_price(model, preprocessor, input_data, inflation_coefficient=1.30) -> Dict:
     try:
         X = preprocessor.transform(input_data)
-        y_log_pred = model.predict(X)[0]
+        
+        # Vérifier si c'est un ensemble ou un modèle simple
+        if isinstance(model, dict) and model.get('type') == 'ensemble':
+            pred_ridge = model['ridge'].predict(X)[0]
+            pred_lgbm = model['lgbm'].predict(X)[0]
+            y_log_pred = model['weights'][0] * pred_ridge + model['weights'][1] * pred_lgbm
+        else:
+            y_log_pred = model.predict(X)[0]
+        
         predicted_price = np.expm1(y_log_pred) * inflation_coefficient
         return {
             'predicted_price': max(1, predicted_price),
