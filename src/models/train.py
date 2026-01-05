@@ -75,11 +75,11 @@ DEFAULT_PARAMS = {
         'alpha': 1.0
     },
     'lgbm': {
-        'n_estimators': 1000,
-        'learning_rate': 0.05,
+        'n_estimators': 1000, #1000
+        'learning_rate': 0.07,
         'max_depth': 8,
-        'num_leaves': 31,
-        'min_child_samples': 20,
+        'num_leaves': 127, #31
+        'min_child_samples': 30,
         'subsample': 0.8,
         'colsample_bytree': 0.8,
         'random_state': 42,

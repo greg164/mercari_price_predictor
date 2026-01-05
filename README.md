@@ -2,6 +2,8 @@
 
 Application de prédiction de prix pour produits d'occasion, basée sur le dataset Mercari (marketplace japonaise similaire à Leboncoin).
 
+https://mercaripricepredictor-gmollot.streamlit.app/
+
 ## 📋 Description
 
 Ce projet propose une interface simple permettant à un vendeur de :
